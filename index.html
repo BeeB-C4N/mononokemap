@@ -452,7 +452,7 @@
 
         // CSVデータのファイルパス
         const csvFilePath = './files/bear_ishikawa_r1_r6.csv';
-
+        
         // Leaflet.DivIconを使ってSVG画像をアイコンとして表示
         const bearIcon = L.icon({
             iconUrl: './files/bear.svg',
@@ -534,14 +534,17 @@
 
         // マーカーをマップに追加する関数
         function addMarkers(data) {
-            // 前回のマーカーをクリア
+            // マーカーをクリアする
             if (map) {
                 map.eachLayer(layer => {
-                    if (layer instanceof L.Marker && layer.getPopup() && layer.getPopup().getContent() !== '現在地') {
+                    if (layer instanceof L.Marker) {
                         map.removeLayer(layer);
                     }
                 });
             }
+
+            // 現在地マーカーを再描画
+            L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
 
             data.forEach(item => {
                 const isBear = item.type === '現実';
@@ -578,11 +581,9 @@
                 const lat = parseFloat(row['緯度']);
                 const lng = parseFloat(row['経度']);
 
-                // 日付を整形してtimestampに変換
                 const dateString = `20${row['出没年'].substring(1)}/${row['出没日'].substring(2).replace(/\./g, '/')} ${row['時刻']}`;
                 const timestamp = new Date(dateString).getTime();
 
-                // 距離を計算
                 const distance = haversine(userLat, userLng, lat, lng);
 
                 return {
@@ -626,20 +627,16 @@
         function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
 
-            // CSVデータを読み込み
             fetch(csvFilePath)
                 .then(response => {
                     if (!response.ok) {
-                        // ファイルの読み込みに失敗した場合、エラーをthrowする
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.text();
                 })
                 .then(csvText => {
                     // ここでCSVの区切り文字をタブに修正
-                    const cleanedCsvText = csvText.replace(/,/g, '\t').replace(/'\t'/g, ' ');
-
-                    const bearData = parseCsvData(cleanedCsvText, lat, lng);
+                    const bearData = parseCsvData(csvText, lat, lng);
                     const mononokeData = getDummyMononokeData(lat, lng);
 
                     const filteredBears = bearData.filter(b => b.distance <= 1);
@@ -665,8 +662,25 @@
                 .catch(error => {
                     console.error('Failed to load CSV data:', error);
                     alert('データの読み込みに失敗しました。');
+                    
+                    // エラー発生時もUIは表示する
+                    const fallbackLat = 36.561334;
+                    const fallbackLng = 136.656209;
+                    userLocation = { lat: fallbackLat, lng: fallbackLng };
+
+                    document.getElementById('subtitle').innerText = `データの読み込みに失敗しました。金沢市役所付近のダミーデータで表示します。`;
+                    
+                    const dummyMononokeData = getDummyMononokeData(fallbackLat, fallbackLng);
+                    allData = [...dummyMononokeData];
+
+                    initMap(userLocation.lat, userLocation.lng);
+                    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
+                    addMarkers(allData);
+                    buildTable(allData);
+
                     overlay.style.display = 'none';
                     appContainer.classList.add('visible');
+                    map.invalidateSize();
                 });
         }
 
