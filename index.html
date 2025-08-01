@@ -7,9 +7,7 @@
     <!-- Google Font for futuristic vibe -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIINf93TRQagRxFDk3iS+xXj8sH9Z/8RjhL4="
-        crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -446,9 +444,7 @@
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20n64z8IgA5/n2oKciuR/5eKkL8b7S5z+k5s/0A+eW="
-        crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Global variables
         let map;
@@ -464,6 +460,7 @@ POINT (137.243301 37.335053)	2	目撃	R4	R4.3.13	18時20分頃	能登町	秋吉 
 POINT (136.524949 36.347705)	3	目撃	R4	R4.3.24	8時10分頃	小松市	松岡町	県道布橋・出合線付近にて、クマ成獣1頭を目撃　パトロール無し	1	松岡町	1.72E+09	5.44E+08	36.347705	136.524949	1	
 POINT (136.484501 36.272365)	4	目撃	R4	R4.3.25	12時00分頃	小松市	大杉町	大杉自由広場付近にて、クマ成獣1頭を目撃。市職員2名、捕獲隊1名　周辺を確認し痕跡なし	1	下大杉町	1.72E+09	5.44E+08	36.272365	136.484501	1	
 POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地内	道路法面でクマらしきものを目撃	1	材木	1.74E+09	5.44E+08	36.652706	136.75888	1	
+POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所付近	デモ用データ	1	金沢市	1.72E+09	5.44E+08	36.561334	136.654316	1	
 `;
         
         // アイコンのSVGデータ
@@ -579,6 +576,7 @@ POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地
 
                 // WKTから緯度経度を抽出
                 const wktMatch = row['WKT'].match(/POINT \(([\d.]+) ([\d.]+)\)/);
+                if (!wktMatch) return null; // 無効な行はスキップ
                 const lat = parseFloat(wktMatch[2]);
                 const lng = parseFloat(wktMatch[1]);
 
@@ -599,7 +597,7 @@ POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地
                     notes: `${row['市町名']} ${row['場所']} - ${row['備考']}`,
                     distance: distance
                 };
-            });
+            }).filter(item => item !== null);
             return data;
         }
 
