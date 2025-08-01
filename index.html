@@ -392,7 +392,7 @@
     <!-- App UI (initially hidden) -->
     <div id="app-container" class="app-container">
         <h1>いしかわモノノケMAP</h1>
-        <h2>石川県内の、現実と空想のモノノケをスキャンしました。</h2>
+        <h2 id="subtitle"></h2>
         
         <div id="map"></div>
         <div id="results-container">
@@ -452,13 +452,20 @@
     <script>
         // Global variables
         let map;
+        let userLocation = null;
         let markers = [];
         let allData = [];
 
-        // 金沢市中心のダミー位置
-        const fixedUserLat = 36.561334;
-        const fixedUserLng = 136.656209;
-
+        // ダミーCSVデータ
+        const dummyCsvData = `
+WKT	ID	目撃痕跡種別	出没年	出没日	時刻	市町名	場所	備考	頭数	集落	集落コード	500mメッシュコード	緯度	経度	森林からの出没	誘因物
+POINT (137.038035 37.095792)	1	目撃	R4	R4.3.3	7時00分頃	七尾市	鵜浦町地内	熊１頭の目撃	1	鵜浦	1.72E+09	5.54E+08	37.095792	137.038035	1	
+POINT (137.243301 37.335053)	2	目撃	R4	R4.3.13	18時20分頃	能登町	秋吉 アピモンド付近　貯水池脇の林の中	山中での作業からの帰り、10m先に1頭のクマを目撃。大きさは柴犬程度	1	秋吉	1.75E+09	5.64E+08	37.335053	137.243301	1	
+POINT (136.524949 36.347705)	3	目撃	R4	R4.3.24	8時10分頃	小松市	松岡町	県道布橋・出合線付近にて、クマ成獣1頭を目撃　パトロール無し	1	松岡町	1.72E+09	5.44E+08	36.347705	136.524949	1	
+POINT (136.484501 36.272365)	4	目撃	R4	R4.3.25	12時00分頃	小松市	大杉町	大杉自由広場付近にて、クマ成獣1頭を目撃。市職員2名、捕獲隊1名　周辺を確認し痕跡なし	1	下大杉町	1.72E+09	5.44E+08	36.272365	136.484501	1	
+POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地内	道路法面でクマらしきものを目撃	1	材木	1.74E+09	5.44E+08	36.652706	136.75888	1	
+`;
+        
         // アイコンのSVGデータ
         const bearSvg = `
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -487,7 +494,7 @@
             if (map) {
                 map.remove(); // 既存のマップを削除
             }
-            map = L.map('map').setView([lat, lng], 10); // ズームレベルを広げて石川県全体が見えるように
+            map = L.map('map').setView([lat, lng], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
@@ -580,7 +587,7 @@
                 const timestamp = new Date(dateString).getTime();
 
                 // 距離を計算
-                const distance = haversine(fixedUserLat, fixedUserLng, lat, lng);
+                const distance = haversine(userLocation.lat, userLocation.lng, lat, lng);
 
                 return {
                     id: row['ID'],
@@ -598,14 +605,18 @@
 
         // ダミーのモノノケデータ（CSVデータに合わせて形式を調整）
         function getDummyMononokeData() {
+            // ユーザーの位置情報が取得できなかった場合のフォールバック位置
+            const centerLat = userLocation ? userLocation.lat : 36.561334;
+            const centerLng = userLocation ? userLocation.lng : 136.656209;
+
             const mononokeData = [
-                { name: 'カッパ', lat: 36.602, lng: 136.665, notes: '浅野川に伝わる伝説の生物' },
-                { name: '天狗', lat: 36.525, lng: 136.650, notes: '大乗寺山に住むと言われる山神' },
-                { name: '化け狐', lat: 36.578, lng: 136.690, notes: '卯辰山に現れると言われる' },
+                { name: 'カッパ', lat: centerLat + 0.02, lng: centerLng + 0.01, notes: '浅野川に伝わる伝説の生物' },
+                { name: '天狗', lat: centerLat - 0.03, lng: centerLng + 0.04, notes: '大乗寺山に住むと言われる山神' },
+                { name: '化け狐', lat: centerLat + 0.05, lng: centerLng - 0.02, notes: '卯辰山に現れると言われる' },
             ];
             
             return mononokeData.map((m, index) => {
-                const distance = haversine(fixedUserLat, fixedUserLng, m.lat, m.lng);
+                const distance = haversine(centerLat, centerLng, m.lat, m.lng);
                 return {
                     id: `m${index}`,
                     type: '空想',
@@ -619,30 +630,30 @@
             });
         }
 
-        // メイン処理：CSVデータを読み込み、マップに表示
-        async function displayDataFromCsv() {
-            try {
-                const response = await fetch('./files/bear_ishikawa_r1_r6.csv');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const csvText = await response.text();
-                const bearData = parseCsvData(csvText);
-                const mononokeData = getDummyMononokeData();
-                
-                // 全データを統合
-                allData = [...bearData, ...mononokeData];
-                
-                // マップとテーブルを初期化
-                initMap(fixedUserLat, fixedUserLng);
-                L.marker([fixedUserLat, fixedUserLng]).addTo(map).bindPopup('現在地（金沢市中心）').openPopup();
-                addMarkers(allData);
-                buildTable(allData);
+        // メイン処理：位置情報を取得し、データを表示
+        function processLocation(lat, lng) {
+            userLocation = { lat, lng };
 
-            } catch (error) {
-                console.error('Failed to load CSV data:', error);
-                alert('データの読み込みに失敗しました。コンソールを確認してください。');
-            }
+            // CSVデータをパースして処理
+            const bearData = parseCsvData(dummyCsvData);
+            
+            // モノノケデータを取得し、距離を計算
+            const mononokeData = getDummyMononokeData();
+
+            // 1km以内のクマデータと5km以内のモノノケデータをフィルタリング
+            const filteredBears = bearData.filter(b => b.distance <= 1);
+            const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
+
+            allData = [...filteredBears, ...filteredMononoke];
+            
+            // UIを更新
+            document.getElementById('subtitle').innerText = `あなたの現在地から、現実と空想のモノノケをスキャンしました。`;
+            
+            // マップとテーブルを初期化
+            initMap(userLocation.lat, userLocation.lng);
+            L.marker([userLocation.lat, userLocation.lng]).addTo(map).bindPopup('現在地').openPopup();
+            addMarkers(allData);
+            buildTable(allData);
         }
 
         // イベントリスナー
@@ -658,18 +669,46 @@
             const tabsContainer = document.querySelector('.tabs');
             
             searchBtn.addEventListener('click', () => {
-                // Hide main page and show overlay
+                searchBtn.disabled = true;
                 mainPage.classList.add('hidden');
                 overlay.style.display = 'flex';
                 
-                // Simulate loading data
-                setTimeout(async () => {
-                    await displayDataFromCsv();
-                    overlay.style.display = 'none';
-                    appContainer.classList.add('visible');
-                    // Invalidate map size to render correctly
-                    map.invalidateSize(); 
-                }, 3000); // 3秒のローディング
+                // Get user's location
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            setTimeout(() => {
+                                processLocation(pos.coords.latitude, pos.coords.longitude);
+                                overlay.style.display = 'none';
+                                appContainer.classList.add('visible');
+                                map.invalidateSize();
+                            }, 3000); // 3秒のローディング
+                        },
+                        (error) => {
+                            console.error("Geolocation error:", error);
+                            // Fallback to Kanazawa City Hall if geolocation fails
+                            const fallbackLat = 36.561334;
+                            const fallbackLng = 136.656209;
+                            setTimeout(() => {
+                                alert('位置情報の取得に失敗しました。金沢市役所付近のデータで表示します。');
+                                processLocation(fallbackLat, fallbackLng);
+                                overlay.style.display = 'none';
+                                appContainer.classList.add('visible');
+                                map.invalidateSize();
+                            }, 3000); // 3秒のローディング
+                        }
+                    );
+                } else {
+                    alert('お使いのブラウザは位置情報に対応していません。');
+                    const fallbackLat = 36.561334;
+                    const fallbackLng = 136.656209;
+                    setTimeout(() => {
+                        processLocation(fallbackLat, fallbackLng);
+                        overlay.style.display = 'none';
+                        appContainer.classList.add('visible');
+                        map.invalidateSize();
+                    }, 3000); // 3秒のローディング
+                }
             });
             
             tabsContainer.addEventListener('click', (e) => {
