@@ -204,12 +204,9 @@
             position: relative;
             width: 32px;
             height: 32px;
+            bottom: 16px; /* SVGアイコンの足元が中心になるように調整 */
         }
         .map-icon-container img {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             width: 100%;
             height: 100%;
         }
@@ -466,6 +463,21 @@ POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地
 POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所付近	デモ用データ	1	金沢市	1.72E+09	5.44E+08	36.561334	136.654316	1	
 `;
         
+        // Leaflet.DivIconを使ってSVG画像をアイコンとして表示
+        const bearIcon = L.icon({
+            iconUrl: './files/bear.svg',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32], // アイコンの足元がマーカーの中心に来るように調整
+            popupAnchor: [0, -32] // ポップアップの位置を調整
+        });
+        
+        const mononokeIcon = L.icon({
+            iconUrl: './files/mononoke.svg',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
         // 2点間の距離を計算する関数 (Haversineの公式)
         function haversine(lat1, lon1, lat2, lon2) {
             const toRad = deg => deg * Math.PI / 180;
@@ -533,23 +545,24 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
         function addMarkers(data) {
             data.forEach(item => {
                 const isBear = item.type === '現実';
-                const container = document.createElement('div');
-                container.className = 'map-ripple-container';
-                const iconPath = isBear ? './files/bear.svg' : './files/mononoke.svg';
-                const rippleClass = isBear ? 'bear-ripple' : 'mononoke-ripple';
-
-                container.innerHTML = `
-                    <div class="ripple ${rippleClass}"></div>
-                    <div class="ripple ${rippleClass}"></div>
-                    <div class="ripple ${rippleClass}"></div>
-                    <div class="map-icon-container">
-                        <img src="${iconPath}" alt="${item.type}アイコン" />
-                    </div>
-                `;
-                const icon = L.divIcon({ html: container.outerHTML, className: '', iconSize: [32, 32] });
-                const marker = L.marker([item.lat, item.lng], { icon }).addTo(map)
+                const icon = isBear ? bearIcon : mononokeIcon;
+                const marker = L.marker([item.lat, item.lng], { icon: icon }).addTo(map)
                     .bindPopup(`<strong>${item.name}</strong><br/>${item.notes}`);
                 markers.push(marker);
+
+                // ズレた波紋アニメーションを削除し、新しい波紋を追加
+                if (isBear) {
+                    const rippleContainer = document.createElement('div');
+                    rippleContainer.className = 'map-ripple-container';
+                    const rippleClass = 'bear-ripple';
+                    rippleContainer.innerHTML = `
+                        <div class="ripple ${rippleClass}"></div>
+                        <div class="ripple ${rippleClass}"></div>
+                        <div class="ripple ${rippleClass}"></div>
+                    `;
+                    const rippleIcon = L.divIcon({ html: rippleContainer.outerHTML, className: '', iconSize: [100, 100], iconAnchor: [50, 50] });
+                    L.marker([item.lat, item.lng], { icon: rippleIcon, interactive: false }).addTo(map);
+                }
             });
         }
         
