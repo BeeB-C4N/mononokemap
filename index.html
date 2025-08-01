@@ -671,6 +671,13 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
                 mainPage.classList.add('hidden');
                 overlay.style.display = 'flex';
                 
+                // Geolocation Options
+                const geoOptions = {
+                    enableHighAccuracy: true,
+                    timeout: 5000, // タイムアウトを5秒に設定
+                    maximumAge: 0
+                };
+                
                 // Get user's location
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
@@ -694,7 +701,8 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
                                 appContainer.classList.add('visible');
                                 map.invalidateSize();
                             }, 3000); // 3秒のローディング
-                        }
+                        },
+                        geoOptions // オプションを渡す
                     );
                 } else {
                     alert('お使いのブラウザは位置情報に対応していません。');
