@@ -451,28 +451,9 @@
         let markers = [];
         let allData = [];
 
-        // ダミーCSVデータ
-        const dummyCsvData = `
-WKT	ID	目撃痕跡種別	出没年	出没日	時刻	市町名	場所	備考	頭数	集落	集落コード	500mメッシュコード	緯度	経度	森林からの出没	誘因物
-POINT (137.038035 37.095792)	1	目撃	R4	R4.3.3	7時00分頃	七尾市	鵜浦町地内	熊１頭の目撃	1	鵜浦	1.72E+09	5.54E+08	37.095792	137.038035	1	
-POINT (137.243301 37.335053)	2	目撃	R4	R4.3.13	18時20分頃	能登町	秋吉 アピモンド付近　貯水池脇の林の中	山中での作業からの帰り、10m先に1頭のクマを目撃。大きさは柴犬程度	1	秋吉	1.75E+09	5.64E+08	37.335053	137.243301	1	
-POINT (136.524949 36.347705)	3	目撃	R4	R4.3.24	8時10分頃	小松市	松岡町	県道布橋・出合線付近にて、クマ成獣1頭を目撃　パトロール無し	1	松岡町	1.72E+09	5.44E+08	36.347705	136.347705	1	
-POINT (136.484501 36.272365)	4	目撃	R4	R4.3.25	12時00分頃	小松市	大杉町	大杉自由広場付近にて、クマ成獣1頭を目撃。市職員2名、捕獲隊1名　周辺を確認し痕跡なし	1	下大杉町	1.72E+09	5.44E+08	36.272365	136.484501	1	
-POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地内	道路法面でクマらしきものを目撃	1	材木	1.74E+09	5.44E+08	36.652706	136.75888	1	
-POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所付近	デモ用データ	1	金沢市	1.72E+09	5.44E+08	36.561334	136.654316	1	
-`;
-        
-        // CSVの緯度経度データが不正な部分を修正し、正確なデータとして扱えるようにする
-        const fixCsvData = `
-WKT	ID	目撃痕跡種別	出没年	出没日	時刻	市町名	場所	備考	頭数	集落	集落コード	500mメッシュコード	緯度	経度	森林からの出没	誘因物
-POINT (137.038035 37.095792)	1	目撃	R4	R4.3.3	7時00分頃	七尾市	鵜浦町地内	熊１頭の目撃	1	鵜浦	1.72E+09	5.54E+08	37.095792	137.038035	1	
-POINT (137.243301 37.335053)	2	目撃	R4	R4.3.13	18時20分頃	能登町	秋吉 アピモンド付近　貯水池脇の林の中	山中での作業からの帰り、10m先に1頭のクマを目撃。大きさは柴犬程度	1	秋吉	1.75E+09	5.64E+08	37.335053	137.243301	1	
-POINT (136.524949 36.347705)	3	目撃	R4	R4.3.24	8時10分頃	小松市	松岡町	県道布橋・出合線付近にて、クマ成獣1頭を目撃　パトロール無し	1	松岡町	1.72E+09	5.44E+08	36.347705	136.524949	1	
-POINT (136.484501 36.272365)	4	目撃	R4	R4.3.25	12時00分頃	小松市	大杉町	大杉自由広場付近にて、クマ成獣1頭を目撃。市職員2名、捕獲隊1名　周辺を確認し痕跡なし	1	下大杉町	1.72E+09	5.44E+08	36.272365	136.484501	1	
-POINT (136.75888 36.652706)	5	目撃	R4	R4.4.3	13時30分頃	津幡町	材木地内	道路法面でクマらしきものを目撃	1	材木	1.74E+09	5.44E+08	36.652706	136.75888	1	
-POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所付近	デモ用データ	1	金沢市	1.72E+09	5.44E+08	36.561334	136.654316	1	
-`;
-        
+        // CSVデータの読み込みパス
+        const csvFilePath = './files/bear_ishikawa_r1_r6.csv';
+
         // Leaflet.DivIconを使ってSVG画像をアイコンとして表示
         const bearIcon = L.icon({
             iconUrl: './files/bear.svg',
@@ -494,7 +475,6 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
             iconAnchor: [12, 41],
             popupAnchor: [1, -34]
         });
-
 
         // 2点間の距離を計算する関数 (Haversineの公式)
         function haversine(lat1, lon1, lat2, lon2) {
@@ -568,7 +548,6 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
                     .bindPopup(`<strong>${item.name}</strong><br/>${item.notes}`);
                 markers.push(marker);
 
-                // ズレた波紋アニメーションを削除し、新しい波紋を追加
                 if (isBear) {
                     const rippleContainer = document.createElement('div');
                     rippleContainer.className = 'map-ripple-container';
@@ -585,7 +564,7 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
         }
         
         // CSVデータをパースして処理する関数
-        function parseCsvData(csvText) {
+        function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
             const headers = lines[0].split('\t').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map(line => {
@@ -595,18 +574,13 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
                     row[header] = values[i];
                 });
 
-                // WKTから緯度経度を抽出
-                const wktMatch = row['WKT'].match(/POINT \(([\d.]+) ([\d.]+)\)/);
-                if (!wktMatch) return null; // 無効な行はスキップ
                 const lat = parseFloat(row['緯度']);
                 const lng = parseFloat(row['経度']);
 
-                // 日付を整形してtimestampに変換
                 const dateString = `20${row['出没年'].substring(1)}/${row['出没日'].substring(2).replace(/\./g, '/')} ${row['時刻']}`;
                 const timestamp = new Date(dateString).getTime();
 
-                // 距離を計算
-                const distance = haversine(userLocation.lat, userLocation.lng, lat, lng);
+                const distance = haversine(userLat, userLng, lat, lng);
 
                 return {
                     id: row['ID'],
@@ -623,18 +597,15 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
         }
 
         // ダミーのモノノケデータ（CSVデータに合わせて形式を調整）
-        function getDummyMononokeData() {
-            const centerLat = userLocation.lat;
-            const centerLng = userLocation.lng;
-
+        function getDummyMononokeData(userLat, userLng) {
             const mononokeData = [
-                { name: 'カッパ', lat: centerLat + 0.02, lng: centerLng + 0.01, notes: '浅野川に伝わる伝説の生物' },
-                { name: '天狗', lat: centerLat - 0.03, lng: centerLng + 0.04, notes: '大乗寺山に住むと言われる山神' },
-                { name: '化け狐', lat: centerLat + 0.05, lng: centerLng - 0.02, notes: '卯辰山に現れると言われる' },
+                { name: 'カッパ', lat: userLat + 0.02, lng: userLng + 0.01, notes: '浅野川に伝わる伝説の生物' },
+                { name: '天狗', lat: userLat - 0.03, lng: userLng + 0.04, notes: '大乗寺山に住むと言われる山神' },
+                { name: '化け狐', lat: userLat + 0.05, lng: userLng - 0.02, notes: '卯辰山に現れると言われる' },
             ];
             
             return mononokeData.map((m, index) => {
-                const distance = haversine(centerLat, centerLng, m.lat, m.lng);
+                const distance = haversine(userLat, userLng, m.lat, m.lng);
                 return {
                     id: `m${index}`,
                     type: '空想',
@@ -649,29 +620,47 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
         }
 
         // メイン処理：位置情報を取得し、データを表示
-        function processLocation(lat, lng) {
+        function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
 
-            // CSVデータをパースして処理
-            const bearData = parseCsvData(fixCsvData);
-            
-            // モノノケデータを取得し、距離を計算
-            const mononokeData = getDummyMononokeData();
+            // CSVデータを読み込み
+            fetch(csvFilePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    const bearData = parseCsvData(csvText, lat, lng);
+                    const mononokeData = getDummyMononokeData(lat, lng);
 
-            // 1km以内のクマデータと5km以内のモノノケデータをフィルタリング
-            const filteredBears = bearData.filter(b => b.distance <= 1);
-            const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
+                    const filteredBears = bearData.filter(b => b.distance <= 1);
+                    const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
 
-            allData = [...filteredBears, ...filteredMononoke];
-            
-            // UIを更新
-            document.getElementById('subtitle').innerText = `あなたの現在地から、現実と空想のモノノケをスキャンしました。`;
-            
-            // マップとテーブルを初期化
-            initMap(userLocation.lat, userLocation.lng);
-            L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
-            addMarkers(allData);
-            buildTable(allData);
+                    allData = [...filteredBears, ...filteredMononoke];
+
+                    if (isFallback) {
+                        document.getElementById('subtitle').innerText = `現在地が取得できませんでした。金沢市役所付近のデータで表示します。`;
+                    } else {
+                        document.getElementById('subtitle').innerText = `あなたの現在地から、現実と空想のモノノケをスキャンしました。`;
+                    }
+
+                    initMap(userLocation.lat, userLocation.lng);
+                    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
+                    addMarkers(allData);
+                    buildTable(allData);
+
+                    overlay.style.display = 'none';
+                    appContainer.classList.add('visible');
+                    map.invalidateSize();
+                })
+                .catch(error => {
+                    console.error('Failed to load CSV data:', error);
+                    alert('データの読み込みに失敗しました。');
+                    overlay.style.display = 'none';
+                    appContainer.classList.add('visible');
+                });
         }
 
         // イベントリスナー
@@ -697,45 +686,30 @@ POINT (136.654316 36.561334)	6	目撃	R4	R4.4.5	9時00分頃	金沢市	市役所
                     maximumAge: 0
                 };
                 
-                // 位置情報取得の試行
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
                             setTimeout(() => {
-                                // ユーザーの位置情報で処理
                                 processLocation(pos.coords.latitude, pos.coords.longitude);
-                                overlay.style.display = 'none';
-                                appContainer.classList.add('visible');
-                                map.invalidateSize();
                             }, 3000);
                         },
                         (error) => {
                             console.error("Geolocation error:", error);
-                            // 失敗した場合はデモ用の金沢市中心部でフォールバック
                             const fallbackLat = 36.561334;
                             const fallbackLng = 136.656209;
-                            
                             setTimeout(() => {
                                 alert('位置情報の取得に失敗しました。金沢市役所付近のデータで表示します。');
-                                processLocation(fallbackLat, fallbackLng);
-                                overlay.style.display = 'none';
-                                appContainer.classList.add('visible');
-                                map.invalidateSize();
+                                processLocation(fallbackLat, fallbackLng, true);
                             }, 3000);
                         },
                         geoOptions
                     );
                 } else {
-                    // ブラウザが位置情報非対応の場合もデモ用の金沢市中心部でフォールバック
-                    alert('お使いのブラウザは位置情報に対応していません。金沢市役所付近のデータで表示します。');
                     const fallbackLat = 36.561334;
                     const fallbackLng = 136.656209;
-                    userLocation = { lat: fallbackLat, lng: fallbackLng };
                     setTimeout(() => {
-                        processLocation(fallbackLat, fallbackLng);
-                        overlay.style.display = 'none';
-                        appContainer.classList.add('visible');
-                        map.invalidateSize();
+                        alert('お使いのブラウザは位置情報に対応していません。金沢市役所付近のデータで表示します。');
+                        processLocation(fallbackLat, fallbackLng, true);
                     }, 3000);
                 }
             });
