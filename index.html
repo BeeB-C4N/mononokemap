@@ -544,7 +544,9 @@
             }
 
             // 現在地マーカーを再描画
-            L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
+            if (userLocation) {
+                L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
+            }
 
             data.forEach(item => {
                 const isBear = item.type === '現実';
@@ -573,6 +575,10 @@
             const headers = lines[0].split('\t').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map(line => {
                 const values = line.split('\t').map(v => v.replace(/\r/g, ''));
+                if (values.length < headers.length) {
+                    console.error('CSVパースエラー: ヘッダーと列数が一致しません。', { line, headers, values });
+                    return null;
+                }
                 let row = {};
                 headers.forEach((header, i) => {
                     row[header] = values[i];
@@ -580,6 +586,10 @@
 
                 const lat = parseFloat(row['緯度']);
                 const lng = parseFloat(row['経度']);
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.error('CSVパースエラー: 緯度または経度が不正です。', { row });
+                    return null;
+                }
 
                 const dateString = `20${row['出没年'].substring(1)}/${row['出没日'].substring(2).replace(/\./g, '/')} ${row['時刻']}`;
                 const timestamp = new Date(dateString).getTime();
@@ -626,18 +636,23 @@
         // メイン処理：位置情報を取得し、データを表示
         function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
-
+            
             fetch(csvFilePath)
                 .then(response => {
+                    console.log('CSVファイル取得中...');
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        console.error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
+                        throw new Error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
                     }
                     return response.text();
                 })
                 .then(csvText => {
-                    // ここでCSVの区切り文字をタブに修正
+                    console.log('CSVファイル取得成功。パースを開始します。');
                     const bearData = parseCsvData(csvText, lat, lng);
                     const mononokeData = getDummyMononokeData(lat, lng);
+                    
+                    console.log('CSVパース成功:', bearData);
+                    console.log('ダミーモノノケデータ:', mononokeData);
 
                     const filteredBears = bearData.filter(b => b.distance <= 1);
                     const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
@@ -651,7 +666,6 @@
                     }
 
                     initMap(userLocation.lat, userLocation.lng);
-                    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
                     addMarkers(allData);
                     buildTable(allData);
 
@@ -660,10 +674,9 @@
                     map.invalidateSize();
                 })
                 .catch(error => {
-                    console.error('Failed to load CSV data:', error);
-                    alert('データの読み込みに失敗しました。');
+                    console.error('致命的なエラー:', error);
+                    alert('データの読み込み中にエラーが発生しました。コンソールを確認してください。');
                     
-                    // エラー発生時もUIは表示する
                     const fallbackLat = 36.561334;
                     const fallbackLng = 136.656209;
                     userLocation = { lat: fallbackLat, lng: fallbackLng };
@@ -674,7 +687,6 @@
                     allData = [...dummyMononokeData];
 
                     initMap(userLocation.lat, userLocation.lng);
-                    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon }).addTo(map).bindPopup('現在地', { offset: L.point(1, -25) }).openPopup();
                     addMarkers(allData);
                     buildTable(allData);
 
