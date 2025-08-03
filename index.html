@@ -502,7 +502,7 @@
         // 表を構築する関数
         function buildTable(data) {
             const tableContainer = document.getElementById('table-container');
-            if (!data.length) {
+            if (!data || data.length === 0) {
                 tableContainer.innerHTML = '<p style="text-align: center; color: #ff4d4d; font-size: 1rem;">データが見つかりませんでした。</p>';
                 return;
             }
@@ -574,11 +574,11 @@
         // CSVデータをパースして処理する関数
         function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
-            const headers = lines[0].split('\t').map(h => h.replace(/\r/g, ''));
+            const headers = lines[0].split(',').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map((line, index) => {
-                const values = line.split('\t').map(v => v.replace(/\r/g, ''));
+                const values = line.split(',').map(v => v.replace(/\r/g, ''));
                 if (values.length < headers.length) {
-                    console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`, { line, headers, values });
+                    console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`);
                     return null;
                 }
                 let row = {};
@@ -586,15 +586,9 @@
                     row[header] = values[i];
                 });
 
-                // WKTから緯度経度を抽出
-                const wktMatch = row['WKT'].match(/POINT \(([\d.]+) ([\d.]+)\)/);
-                if (!wktMatch) {
-                    console.error(`CSVパースエラー（行 ${index + 2}）: WKT形式が不正です。`, { row });
-                    return null;
-                }
-                const lat = parseFloat(wktMatch[2]);
-                const lng = parseFloat(wktMatch[1]);
-
+                const lat = parseFloat(row['緯度']);
+                const lng = parseFloat(row['経度']);
+                
                 if (isNaN(lat) || isNaN(lng)) {
                     console.error(`CSVパースエラー（行 ${index + 2}）: 緯度または経度が不正です。`, { row });
                     return null;
@@ -646,16 +640,18 @@
         function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
 
+            // CSVデータを読み込み
             fetch(csvFilePath)
                 .then(response => {
-                    console.log('CSVファイル取得中...');
+                    console.log('CSVファイル取得中...:', response);
                     if (!response.ok) {
-                        console.error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
+                        console.error(`CSVファイル取得エラー: HTTP Status ${response.status} - ${response.statusText}`);
                         throw new Error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
                     }
                     return response.text();
                 })
                 .then(csvText => {
+                    console.log('CSVファイル取得成功。パースを開始します。');
                     const bearData = parseCsvData(csvText, lat, lng);
                     const mononokeData = getDummyMononokeData(lat, lng);
                     
