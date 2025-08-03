@@ -586,8 +586,15 @@
                     row[header] = values[i];
                 });
 
-                const lat = parseFloat(row['緯度']);
-                const lng = parseFloat(row['経度']);
+                // WKTから緯度経度を抽出
+                const wktMatch = row['WKT'].match(/POINT \(([\d.]+) ([\d.]+)\)/);
+                if (!wktMatch) {
+                    console.error(`CSVパースエラー（行 ${index + 2}）: WKT形式が不正です。`, { row });
+                    return null;
+                }
+                const lat = parseFloat(wktMatch[2]);
+                const lng = parseFloat(wktMatch[1]);
+
                 if (isNaN(lat) || isNaN(lng)) {
                     console.error(`CSVパースエラー（行 ${index + 2}）: 緯度または経度が不正です。`, { row });
                     return null;
@@ -641,6 +648,7 @@
 
             fetch(csvFilePath)
                 .then(response => {
+                    console.log('CSVファイル取得中...');
                     if (!response.ok) {
                         console.error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
                         throw new Error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
@@ -648,9 +656,11 @@
                     return response.text();
                 })
                 .then(csvText => {
-                    // CSVの区切り文字をタブに修正（あなたの提供データに合わせて）
                     const bearData = parseCsvData(csvText, lat, lng);
                     const mononokeData = getDummyMononokeData(lat, lng);
+                    
+                    console.log('CSVパース成功。クマデータ:', bearData);
+                    console.log('ダミーモノノケデータ:', mononokeData);
 
                     const filteredBears = bearData.filter(b => b.distance <= 1);
                     const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
