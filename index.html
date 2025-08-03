@@ -449,6 +449,8 @@
         let map;
         let userLocation = null;
         let allData = [];
+        const appContainer = document.getElementById('app-container');
+        const overlay = document.getElementById('overlay');
 
         // CSVデータのファイルパス
         const csvFilePath = './files/bear_ishikawa_r1_r6.csv';
@@ -573,10 +575,10 @@
         function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
             const headers = lines[0].split('\t').map(h => h.replace(/\r/g, ''));
-            const data = lines.slice(1).map(line => {
+            const data = lines.slice(1).map((line, index) => {
                 const values = line.split('\t').map(v => v.replace(/\r/g, ''));
                 if (values.length < headers.length) {
-                    console.error('CSVパースエラー: ヘッダーと列数が一致しません。', { line, headers, values });
+                    console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`, { line, headers, values });
                     return null;
                 }
                 let row = {};
@@ -587,7 +589,7 @@
                 const lat = parseFloat(row['緯度']);
                 const lng = parseFloat(row['経度']);
                 if (isNaN(lat) || isNaN(lng)) {
-                    console.error('CSVパースエラー: 緯度または経度が不正です。', { row });
+                    console.error(`CSVパースエラー（行 ${index + 2}）: 緯度または経度が不正です。`, { row });
                     return null;
                 }
 
@@ -636,10 +638,9 @@
         // メイン処理：位置情報を取得し、データを表示
         function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
-            
+
             fetch(csvFilePath)
                 .then(response => {
-                    console.log('CSVファイル取得中...');
                     if (!response.ok) {
                         console.error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
                         throw new Error(`CSVファイル取得エラー: HTTP Status ${response.status}`);
@@ -647,12 +648,9 @@
                     return response.text();
                 })
                 .then(csvText => {
-                    console.log('CSVファイル取得成功。パースを開始します。');
+                    // CSVの区切り文字をタブに修正（あなたの提供データに合わせて）
                     const bearData = parseCsvData(csvText, lat, lng);
                     const mononokeData = getDummyMononokeData(lat, lng);
-                    
-                    console.log('CSVパース成功:', bearData);
-                    console.log('ダミーモノノケデータ:', mononokeData);
 
                     const filteredBears = bearData.filter(b => b.distance <= 1);
                     const filteredMononoke = mononokeData.filter(m => m.distance <= 5);
@@ -700,8 +698,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const searchBtn = document.getElementById('searchBtn');
             const mainPage = document.getElementById('main-page');
-            const appContainer = document.getElementById('app-container');
-            const overlay = document.getElementById('overlay');
             const postBtn = document.getElementById('post-button');
             const postModal = document.getElementById('post-modal');
             const closeModalBtn = document.getElementById('close-modal');
