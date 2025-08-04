@@ -506,7 +506,6 @@
                             <th>詳細</th>
                             <th>距離 (km)</th>
                             <th>日付</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -516,33 +515,17 @@
                 const formattedDate = date ? `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}` : '-';
                 
                 html += `
-                    <tr class="table-row-toggle" data-index="${index}">
+                    <tr>
                         <td>${item.type}</td>
                         <td>${item.name}</td>
                         <td>${item.notes}</td>
                         <td>${item.distance.toFixed(2)}</td>
                         <td>${formattedDate}</td>
-                        <td><button class="accordion-button">▼</button></td>
-                    </tr>
-                    <tr class="accordion-content">
-                        <td colspan="6">
-                            <p>${item.notes}</p>
-                        </td>
                     </tr>
                 `;
             });
             html += '</tbody></table>';
             tableContainer.innerHTML = html;
-
-            document.querySelectorAll('.accordion-button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const row = e.target.closest('tr');
-                    const nextRow = row.nextElementSibling;
-                    const isExpanded = nextRow.classList.toggle('open');
-                    
-                    e.target.classList.toggle('open', isExpanded);
-                });
-            });
         }
 
         // マーカーをマップに追加する関数
@@ -585,10 +568,8 @@
         // CSVデータをパースして処理する関数
         function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
-            // ヘッダーをカンマで分割
             const headers = lines[0].split(',').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map((line, index) => {
-                // 行をカンマで分割
                 const values = line.split(',').map(v => v.replace(/\r/g, ''));
                 if (values.length < headers.length) {
                     console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`);
