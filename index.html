@@ -223,8 +223,17 @@
             border-radius: 50%;
             opacity: 0;
             transform: translate(-50%, -50%) scale(0);
+        }
+        .map-ripple-container .ripple.bear-ripple {
+            border: 3px solid #ff1a1a;
             animation: mapRippleRed 3s infinite;
         }
+        .map-ripple-container .ripple.mononoke-ripple {
+            border: 3px solid #4dff4d;
+            animation: mapRippleGreen 3s infinite;
+        }
+        .map-ripple-container .ripple:nth-child(2) { animation-delay: 1s; }
+        .map-ripple-container .ripple:nth-child(3) { animation-delay: 2s; }
         @keyframes mapRippleRed {
             0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0); }
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
@@ -260,6 +269,34 @@
             background-color: #333;
             color: #ff4d4d;
             border-color: #ff4d4d;
+        }
+        
+        .table-row-toggle {
+            cursor: pointer;
+        }
+        .accordion-content {
+            display: none;
+            overflow: hidden;
+            background-color: #2a2a2a;
+            transition: max-height 0.3s ease-out;
+            max-height: 0;
+            padding: 0 12px;
+        }
+        .accordion-content.open {
+            display: block;
+            max-height: 100px; /* Adjust as needed */
+            padding: 8px 12px;
+        }
+        .accordion-button {
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #fff;
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+        .accordion-button.open {
+            transform: rotate(180deg);
         }
 
         /* Post button */
@@ -505,24 +542,45 @@
                             <th>名前/場所</th>
                             <th>詳細</th>
                             <th>距離 (km)</th>
-                            <th>日時</th>
+                            <th>日付</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            data.forEach(item => {
+            data.forEach((item, index) => {
+                const date = item.timestamp ? new Date(item.timestamp) : null;
+                const formattedDate = date ? `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}` : '-';
+                
                 html += `
-                    <tr>
+                    <tr class="table-row-toggle" data-index="${index}">
                         <td>${item.type}</td>
                         <td>${item.name}</td>
                         <td>${item.notes}</td>
                         <td>${item.distance.toFixed(2)}</td>
-                        <td>${item.timestamp ? new Date(item.timestamp).toLocaleString('ja-JP') : '-'}</td>
+                        <td>${formattedDate}</td>
+                        <td><button class="accordion-button">▼</button></td>
+                    </tr>
+                    <tr class="accordion-content">
+                        <td colspan="6">
+                            <p>${item.notes}</p>
+                        </td>
                     </tr>
                 `;
             });
             html += '</tbody></table>';
             tableContainer.innerHTML = html;
+
+            document.querySelectorAll('.accordion-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    const nextRow = row.nextElementSibling;
+                    const accordionContent = nextRow.querySelector('.accordion-content td p');
+                    const isExpanded = nextRow.classList.toggle('open');
+                    
+                    e.target.classList.toggle('open', isExpanded);
+                });
+            });
         }
 
         // マーカーをマップに追加する関数
@@ -565,10 +623,8 @@
         // CSVデータをパースして処理する関数
         function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
-            // ヘッダーをカンマで分割
             const headers = lines[0].split(',').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map((line, index) => {
-                // 行をカンマで分割
                 const values = line.split(',').map(v => v.replace(/\r/g, ''));
                 if (values.length < headers.length) {
                     console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`);
@@ -587,8 +643,11 @@
                     return null;
                 }
 
-                const dateString = `20${row['出没年'].substring(1)}/${row['出没日'].substring(2).replace(/\./g, '/')} ${row['時刻']}`;
-                const timestamp = new Date(dateString).getTime();
+                // 日時を「出没年」と「出没日」から日付のみに変換
+                const date = row['出没日'] ? new Date(
+                    `20${row['出没年'].substring(1)}-${row['出没日'].substring(2).replace(/\./g, '-')}`
+                ) : null;
+                const timestamp = date ? date.getTime() : null;
 
                 const distance = haversine(userLat, userLng, lat, lng);
 
