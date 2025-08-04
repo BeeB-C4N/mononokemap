@@ -223,17 +223,8 @@
             border-radius: 50%;
             opacity: 0;
             transform: translate(-50%, -50%) scale(0);
-        }
-        .map-ripple-container .ripple.bear-ripple {
-            border: 3px solid #ff1a1a;
             animation: mapRippleRed 3s infinite;
         }
-        .map-ripple-container .ripple.mononoke-ripple {
-            border: 3px solid #4dff4d;
-            animation: mapRippleGreen 3s infinite;
-        }
-        .map-ripple-container .ripple:nth-child(2) { animation-delay: 1s; }
-        .map-ripple-container .ripple:nth-child(3) { animation-delay: 2s; }
         @keyframes mapRippleRed {
             0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0); }
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
@@ -536,14 +527,14 @@
 
         // マーカーをマップに追加する関数
         function addMarkers(data) {
+            if (!map) return;
+
             // マーカーをクリアする
-            if (map) {
-                map.eachLayer(layer => {
-                    if (layer instanceof L.Marker) {
-                        map.removeLayer(layer);
-                    }
-                });
-            }
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
 
             // 現在地マーカーを再描画
             if (userLocation) {
@@ -574,8 +565,10 @@
         // CSVデータをパースして処理する関数
         function parseCsvData(csvText, userLat, userLng) {
             const lines = csvText.trim().split('\n');
+            // ヘッダーをカンマで分割
             const headers = lines[0].split(',').map(h => h.replace(/\r/g, ''));
             const data = lines.slice(1).map((line, index) => {
+                // 行をカンマで分割
                 const values = line.split(',').map(v => v.replace(/\r/g, ''));
                 if (values.length < headers.length) {
                     console.error(`CSVパースエラー（行 ${index + 2}）: ヘッダーと列数が一致しません。`);
@@ -640,7 +633,6 @@
         function processLocation(lat, lng, isFallback = false) {
             userLocation = { lat, lng };
 
-            // CSVデータを読み込み
             fetch(csvFilePath)
                 .then(response => {
                     console.log('CSVファイル取得中...:', response);
@@ -717,7 +709,7 @@
                 
                 const geoOptions = {
                     enableHighAccuracy: true,
-                    timeout: 10000, 
+                    timeout: 7000, // タイムアウトを7秒に設定
                     maximumAge: 0
                 };
                 
@@ -729,7 +721,7 @@
                             }, 3000);
                         },
                         (error) => {
-                            console.error("Geolocation error:", error);
+                            console.error("Geolocation error:", error.code, error.message);
                             const fallbackLat = 36.561334;
                             const fallbackLng = 136.656209;
                             setTimeout(() => {
